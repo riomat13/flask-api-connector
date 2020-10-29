@@ -1,0 +1,14 @@
+*.py[cod]
+__pycache__
+
+# package
+*.egg
+*.egg-info
+dist
+build
+eggs
+sdist
+
+# test
+.coverage
+.tox
