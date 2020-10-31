@@ -41,6 +41,7 @@ setup(
     platform='any',
     install_requires=[
         'Flask',
+        'pytz',
     ],
     test_suite='tests',
     classifiers=[
