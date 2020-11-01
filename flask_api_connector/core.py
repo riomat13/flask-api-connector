@@ -12,15 +12,16 @@ to register the view methods.
 
 
 import os
-from typing import List, NamedTuple
+from typing import List
 
 from .views import BaseView
 
 
-class _Path(NamedTuple):
-    rule: str
-    view_cls: object
-    name: str
+class _Path(object):
+    def __init__(self, rule: str, view_cls: type, name: str):
+        self.rule = rule
+        self.view_cls = view_cls
+        self.name = name
 
 
 class Paths(object):
@@ -29,6 +30,12 @@ class Paths(object):
     This is used for ApiConnctor as an adapter.
 
     The argument must be an iterable of tuple or list.
+
+    Args:
+        paths: list of tuple (path, View class, endpoint(optional))
+        base_url: str (default: None)
+            if this is set, add the url to all given paths
+
     Example:
         Paths([
             ('/first', First, 'firstitem'),
@@ -44,21 +51,39 @@ class Paths(object):
         the lower-cased class name is used,
         so that the endpoint in the second tuple will be 'second'.
     """
-    def __init__(self, paths: List[tuple]):
+    def __init__(self, paths: List[tuple], base_url: str = None):
         self.paths = iter(paths)
+        self.base_url = base_url
 
     def __iter__(self):
         for path_ in self.paths:
-            path = self.process(path_)
-            yield path
+            path = self._process(path_)
 
-    def process(self, path):
-        url, view_cls, *args = path
+            if hasattr(path, '__iter__') and not isinstance(path, _Path):
+                for p in path:
+                    yield p
+            else:
+                yield path
+
+    def _process(self, path_):
+        if isinstance(path_, type(self)):
+            def update_url(path):
+                if self.base_url is not None:
+                    path.rule = os.path.join(self.base_url,
+                                             path.rule.lstrip('/'))
+                return path
+            return map(update_url, path_)
+
+        url, view_cls, *args = path_
 
         class View(BaseView, view_cls):
             pass
 
         name = args[0] if args else view_cls.__name__.lower()
+
+        if self.base_url is not None:
+            # to concatenate urls, second one must not start with '/'
+            url = os.path.join(self.base_url, url.lstrip('/'))
 
         path = _Path(rule=url,
                      view_cls=View,
@@ -92,24 +117,24 @@ class ApiConnector(object):
         ...    ('/second', Second),
         ...])
         >>>
-        >>> connector = ApiConnector(paths, base_url='/api')
+        >>> connector = ApiConnector(paths, root_url='/api')
         >>> connector.init_app(app)
         >>> app.run()
     """
 
-    def __init__(self, paths: Paths, base_url='/api'):
+    def __init__(self, paths: Paths, root_url='/api'):
         """Api connector.
 
         Args:
             paths: Paths
-            base_url: str (default: '/api')
-                base url of the views
+            root_url: str (default: '/api')
+                root url of the views
         """
         self.paths = paths
-        self.base_url = base_url
+        self.root_url = root_url or '/'
 
     def init_app(self, app) -> None:
         for path in self.paths:
-            rule = os.path.normpath(self.base_url + '/' + path.rule)
+            rule = os.path.normpath(self.root_url + '/' + path.rule)
 
             app.add_url_rule(rule, view_func=path.view_cls.as_view(path.name))

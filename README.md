@@ -15,21 +15,23 @@ class Example:
         return 'get'
 
     def post(self):
+        # do something
         return 'post'
 
-class Something:
-    def get(self, request):
-      # do something
+class Hello:
+    def get(self, name):
+        return f'Hello {name}!'
 
-      # return json serializable object, e.g. dict
-      return { ... }
+app_paths = Paths([
+  ('/hello/<string:name>', App1),
+], base_url='app')
 
 paths = Paths([
   ('/example', Example),
-  ('/something', Something)
+  app_paths,  # can nest paths
 ])
 
-ApiConnector(paths=paths, base_url='/api').init_app(app)
+ApiConnector(paths=paths, root_url='/api').init_app(app)
 
 app.run()
 ```
@@ -40,7 +42,12 @@ $ curl 127.0.0.1:5000/api/example
 "get"
 $ curl -X POST 127.0.0.1:5000/api/example
 "post"
+$ curl 127.0.0.1:5000/api/app/hello/John
+"Hello John!"
 ```
+
+See other example usages in `./example/app.py`
+
 
 ## Note
 - use `request`, `session`, `g`
@@ -50,5 +57,6 @@ $ curl -X POST 127.0.0.1:5000/api/example
   What only needs to do is set as argument in the method function as in the example.
 
 
-## TODO
-- handle nested paths
+## TODO:
+- handle trailing slash
+- make marshal usable from `Paths`

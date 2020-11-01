@@ -6,7 +6,7 @@ from flask_api_connector.core import Paths
 
 
 def test_execute_process_for_all_paths():
-    with patch('flask_api_connector.core.Paths.process') as mock_process:
+    with patch('flask_api_connector.core.Paths._process') as mock_process:
         # entity function to check input
         mock_process.side_effect = lambda x: x
 
@@ -57,3 +57,56 @@ def test_process_path_items():
     assert paths[2].name == 'test3'
     assert hasattr(paths[2].view_cls, 'get')
     assert hasattr(paths[2].view_cls, 'post')
+
+
+def test_nested_paths():
+    view_classes = []
+
+    for i in range(6):
+
+        class View(object):
+            name = i
+
+            def get(self):
+                return f'test{self.i}'
+
+        View.__name__ = f'View{i}'
+        view_classes.append(View)
+
+    child_paths1 = Paths([
+        ('/test0', view_classes[0]),
+        ('/test1', view_classes[1])
+    ])
+
+    child_paths2 = Paths([
+        ('/test2', view_classes[2]),
+        ('/test3/item', view_classes[3])
+    ], base_url='/child')
+
+    child_paths = Paths([
+        ('/test4', view_classes[4]),
+        child_paths1,
+        child_paths2
+    ])
+
+    paths = Paths([
+        ('/test5', view_classes[5]),
+        child_paths,
+    ], base_url='/base')
+
+    targets = {
+        'view0': {'rule': '/base/test0'},
+        'view1': {'rule': '/base/test1'},
+        'view2': {'rule': '/base/child/test2'},
+        'view3': {'rule': '/base/child/test3/item'},
+        'view4': {'rule': '/base/test4'},
+        'view5': {'rule': '/base/test5'},
+    }
+
+    for path in paths:
+        target = targets.pop(path.name)
+
+        assert path.rule == target['rule']
+        assert hasattr(path.view_cls, 'get')
+
+    assert not targets

@@ -29,7 +29,7 @@ def test_set_paths_to_app(app, paths):
         mock_fn.assert_called_once_with(path.name)
 
 
-def test_set_base_url(app, paths):
+def test_set_root_url(app, paths):
     app.add_url_rule = MagicMock()
 
     # mock all as_view method in view class
@@ -37,7 +37,7 @@ def test_set_base_url(app, paths):
         path.view_cls.as_view = MagicMock()
 
     # test with user defined base url
-    ApiConnector(paths, base_url='/test').init_app(app)
+    ApiConnector(paths, root_url='/test').init_app(app)
     assert len(app.add_url_rule.call_args_list) == len(paths)
 
     for path, call_args in zip(paths, app.add_url_rule.call_args_list):

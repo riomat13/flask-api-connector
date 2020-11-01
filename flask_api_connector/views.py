@@ -14,7 +14,7 @@ import inspect
 from functools import partialmethod, wraps
 
 from flask import request, session, g, jsonify
-from flask.views import http_method_funcs
+from flask.views import View, http_method_funcs
 
 
 def _make_jsonify(view_func):
@@ -26,7 +26,14 @@ def _make_jsonify(view_func):
     return wrapper
 
 
-class BaseView(object):
+class BaseView(View):
+    """Base view class to inject views to app."""
+
+    # default methods list
+    methods = None
+
+    # disable option handling
+    provide_automatic_options = None
 
     @classmethod
     def as_view(cls, name, *cls_args, **cls_kwargs):
